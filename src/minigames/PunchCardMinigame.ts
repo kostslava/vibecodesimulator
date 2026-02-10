@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { useGameStore } from '../store/gameStore';
-import { getMissionById } from '../data/missions';
+import { showMissionResults } from '../utils/missionResults';
 
 interface Card {
   id: number;
@@ -132,10 +131,15 @@ export class PunchCardMinigame extends Phaser.Scene {
       this.cards.push(card);
     });
 
-    // Drag events
+    // Drag events with better feedback
     this.input.on('dragstart', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
       const card = gameObject.getData('card') as Card;
-      card.sprite.setAlpha(0.7);
+      card.sprite.setAlpha(0.8);
+      card.sprite.setDepth(100); // Bring to front
+      card.text.setDepth(101);
+      // Slight scale up for visual feedback
+      card.sprite.setScale(1.1);
+      card.text.setScale(1.1);
     });
 
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject, dragX: number, dragY: number) => {
@@ -144,11 +148,23 @@ export class PunchCardMinigame extends Phaser.Scene {
       card.sprite.y = dragY;
       card.text.x = dragX;
       card.text.y = dragY;
+      
+      // Highlight potential slot (visual feedback without tint)
+      const slotIndex = this.findNearestSlot(dragX);
+      if (slotIndex !== -1 && Math.abs(dragY - 400) < 100) {
+        // Show visual hint - change fill color slightly
+        card.sprite.setFillStyle(0xddbb66);
+      } else {
+        card.sprite.setFillStyle(0xaa8844);
+      }
     });
 
     this.input.on('dragend', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
       const card = gameObject.getData('card') as Card;
       card.sprite.setAlpha(1);
+      card.sprite.setScale(1);
+      card.text.setScale(1);
+      card.sprite.setFillStyle(0xaa8844); // Reset to original color
 
       // Snap to nearest slot
       const slotIndex = this.findNearestSlot(card.sprite.x);
@@ -157,6 +173,9 @@ export class PunchCardMinigame extends Phaser.Scene {
         card.sprite.y = 400;
         card.text.x = this.targetSlots[slotIndex];
         card.text.y = 400;
+      } else {
+        // If not near a slot, return to original position or keep where dropped
+        // For better UX, we'll keep it where dropped
       }
 
       this.checkCompletion();
@@ -211,60 +230,12 @@ export class PunchCardMinigame extends Phaser.Scene {
   }
 
   private missionComplete(success: boolean): void {
-    // Stop timer
+    // Stop timer and disable input
     this.time.removeAllEvents();
+    this.input.removeAllListeners();
 
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
-
-    this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-
-    const resultText = success ? 'MISSION COMPLETE!' : 'MISSION FAILED!';
-    const resultColor = success ? '#00ff00' : '#ff0000';
-
-    this.add.text(width / 2, height / 2 - 50, resultText, {
-      fontSize: '48px',
-      color: resultColor,
-      fontFamily: 'monospace',
-    }).setOrigin(0.5);
-
-    if (success) {
-      // Award money and complete mission
-      const mission = getMissionById(this.missionId);
-      if (mission) {
-        const state = useGameStore.getState();
-        state.addMoney(mission.reward.money);
-        state.completeMission(this.missionId);
-        state.incrementStat('minigamesWon');
-        state.incrementStat('projectsCompleted');
-
-        // Apply reputation changes
-        mission.reward.reputation.forEach(rep => {
-          state.updateReputation(rep.type as keyof typeof state.reputation, rep.amount);
-        });
-
-        // Discover conspiracy documents
-        if (mission.conspiracyReveal) {
-          state.discoverDocument(mission.conspiracyReveal.documentId);
-        }
-
-        this.add.text(width / 2, height / 2 + 20, `+$${mission.reward.money}`, {
-          fontSize: '32px',
-          color: '#ffff00',
-          fontFamily: 'monospace',
-        }).setOrigin(0.5);
-      }
-    } else {
-      useGameStore.getState().incrementStat('minigamesLost');
-    }
-
-    this.add.text(width / 2, height / 2 + 100, 'Press SPACE to continue', {
-      fontSize: '20px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-    }).setOrigin(0.5);
-
-    this.input.keyboard?.once('keydown-SPACE', () => {
+    // Show results using utility
+    showMissionResults(this, this.missionId, success, () => {
       this.scene.start('BasementScene');
     });
   }

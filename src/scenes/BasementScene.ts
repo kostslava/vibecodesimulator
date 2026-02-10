@@ -163,9 +163,11 @@ export class BasementScene extends Phaser.Scene {
         option.action();
       });
 
-      // Keyboard shortcuts
-      this.input.keyboard?.on(`keydown-${option.key}`, () => {
-        option.action();
+      // Keyboard shortcuts - only trigger if no modifiers are pressed
+      this.input.keyboard?.on(`keydown-${option.key}`, (event: KeyboardEvent) => {
+        if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+          option.action();
+        }
       });
 
       this.menuOptions.push(optionText);
@@ -179,20 +181,42 @@ export class BasementScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.9).setOrigin(0).setInteractive();
+    // Create overlay that doesn't block mission clicks
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.9).setOrigin(0);
+    overlay.setDepth(-1); // Put overlay behind other elements
 
-    this.add.text(width / 2, 80, 'PROJECT BOARD', {
+    const boardContainer = this.add.container(0, 0);
+    boardContainer.setDepth(1);
+
+    const titleText = this.add.text(width / 2, 80, 'PROJECT BOARD', {
       fontSize: '32px',
       color: '#00ff00',
       fontFamily: 'monospace',
     }).setOrigin(0.5);
+    boardContainer.add(titleText);
+
+    const closeButton = this.add.text(width - 100, 50, '[X] CLOSE', {
+      fontSize: '16px',
+      color: '#ff0000',
+      fontFamily: 'monospace',
+    });
+    closeButton.setInteractive({ useHandCursor: true });
+    closeButton.on('pointerover', () => closeButton.setColor('#ff5555'));
+    closeButton.on('pointerout', () => closeButton.setColor('#ff0000'));
+    closeButton.on('pointerdown', () => {
+      overlay.destroy();
+      boardContainer.destroy();
+      this.scene.restart();
+    });
+    boardContainer.add(closeButton);
 
     if (missions.length === 0) {
-      this.add.text(width / 2, height / 2, 'No missions available in this era.', {
+      const noMissionsText = this.add.text(width / 2, height / 2, 'No missions available in this era.', {
         fontSize: '20px',
         color: '#ffffff',
         fontFamily: 'monospace',
       }).setOrigin(0.5);
+      boardContainer.add(noMissionsText);
     } else {
       const startY = 150;
       missions.forEach((mission, index) => {
@@ -200,33 +224,50 @@ export class BasementScene extends Phaser.Scene {
         const status = isCompleted ? '[DONE]' : '[NEW]';
         const color = isCompleted ? '#666666' : '#00ff00';
 
-        const missionText = this.add.text(100, startY + index * 80, 
+        // Create a background for each mission for better click detection
+        const missionBg = this.add.rectangle(width / 2, startY + index * 90, width - 200, 75, 0x222222, 0.5);
+        boardContainer.add(missionBg);
+
+        const missionText = this.add.text(100, startY + index * 90 - 30, 
           `${status} ${mission.title}\nClient: ${mission.client}\nReward: $${mission.reward.money}`, {
           fontSize: '16px',
           color: color,
           fontFamily: 'monospace',
         });
+        boardContainer.add(missionText);
 
         if (!isCompleted) {
+          missionBg.setInteractive({ useHandCursor: true });
           missionText.setInteractive({ useHandCursor: true });
-          missionText.on('pointerdown', () => {
-            overlay.destroy();
-            this.startMission(mission.id);
-          });
+          
+          const addHoverEffect = (obj: Phaser.GameObjects.GameObject) => {
+            obj.on('pointerover', () => {
+              missionBg.setFillStyle(0x004400, 0.7);
+              missionText.setColor('#ffff00');
+            });
+            obj.on('pointerout', () => {
+              missionBg.setFillStyle(0x222222, 0.5);
+              missionText.setColor(color);
+            });
+            obj.on('pointerdown', () => {
+              overlay.destroy();
+              boardContainer.destroy();
+              this.startMission(mission.id);
+            });
+          };
+
+          addHoverEffect(missionBg);
+          addHoverEffect(missionText);
         }
       });
     }
 
-    this.add.text(width / 2, height - 60, 'Click anywhere to close', {
+    const instructionText = this.add.text(width / 2, height - 60, 'Click [X] CLOSE or a mission to continue', {
       fontSize: '14px',
       color: '#888888',
       fontFamily: 'monospace',
     }).setOrigin(0.5);
-
-    overlay.on('pointerdown', () => {
-      overlay.destroy();
-      this.scene.restart();
-    });
+    boardContainer.add(instructionText);
   }
 
   private startMission(missionId: string): void {

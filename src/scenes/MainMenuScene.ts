@@ -179,6 +179,14 @@ export class MainMenuScene extends Phaser.Scene {
     if (!keyboard) return;
 
     const keyHandler = (event: KeyboardEvent) => {
+      // Ignore keyboard shortcuts with modifier keys to prevent intercepting browser shortcuts
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      // Prevent default to avoid double input
+      event.preventDefault();
+
       if (event.key === 'Enter' && playerName.length > 0) {
         keyboard.off('keydown', keyHandler);
         useGameStore.getState().setPlayerName(playerName);
@@ -191,7 +199,8 @@ export class MainMenuScene extends Phaser.Scene {
       } else if (event.key === 'Backspace') {
         playerName = playerName.slice(0, -1);
         nameDisplay.setText(playerName + '_');
-      } else if (event.key.length === 1 && playerName.length < 20) {
+      } else if (event.key.length === 1 && playerName.length < 20 && /^[a-zA-Z0-9 _-]$/.test(event.key)) {
+        // Only accept alphanumeric characters, spaces, underscores, and hyphens
         playerName += event.key;
         nameDisplay.setText(playerName + '_');
       }
