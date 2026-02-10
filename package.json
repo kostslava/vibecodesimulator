@@ -1,0 +1,38 @@
+{
+  "name": "vibe-code-simulator",
+  "version": "1.0.0",
+  "description": "A narrative-driven web game spanning 80 years of programming history",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1",
+    "zustand": "^4.5.0",
+    "howler": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/howler": "^2.2.11",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8.56.0",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  },
+  "keywords": [
+    "game",
+    "phaser",
+    "typescript",
+    "narrative",
+    "programming",
+    "history"
+  ],
+  "author": "",
+  "license": "MIT"
+}
