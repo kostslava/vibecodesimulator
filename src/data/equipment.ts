@@ -134,7 +134,7 @@ export const equipment: Equipment[] = [
     name: 'Dial-up Modem',
     era: 5,
     cost: 200,
-    effects: { communityRespect: 5 },
+    effects: {},
     visual: 'net_dialup',
     description: '56k screaming into your ears',
   },
