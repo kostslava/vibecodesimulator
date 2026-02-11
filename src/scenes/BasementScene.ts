@@ -1,13 +1,20 @@
 import Phaser from 'phaser';
 import { useGameStore } from '../store/gameStore';
 import { SaveLoadSystem } from '../systems/SaveLoadSystem';
+import { NotificationSystem } from '../systems/NotificationSystem';
+import { TutorialSystem } from '../systems/TutorialSystem';
 import { getMissionsByEra } from '../data/missions';
 import { getEquipmentByEra } from '../data/equipment';
+import { WorkspaceVisualizer } from '../utils/WorkspaceVisualizer';
+import { AnimationEffects } from '../utils/AnimationEffects';
 
 export class BasementScene extends Phaser.Scene {
   private playerName: string = '';
   private currentEra: number = 1;
   private menuOptions: Phaser.GameObjects.Text[] = [];
+  private workspaceVisualizer: WorkspaceVisualizer | null = null;
+  private notificationSystem: NotificationSystem | null = null;
+  private tutorialSystem: TutorialSystem | null = null;
 
   constructor() {
     super({ key: 'BasementScene' });
@@ -18,70 +25,94 @@ export class BasementScene extends Phaser.Scene {
     this.playerName = state.playerName;
     this.currentEra = state.currentEra;
 
+    // Initialize systems
+    this.notificationSystem = new NotificationSystem(this);
+    this.tutorialSystem = new TutorialSystem(this);
+
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Background
-    this.add.rectangle(0, 0, width, height, 0x1a1a1a).setOrigin(0);
+    // Background - evolves with era
+    const bgColor = this.getBackgroundColor(this.currentEra);
+    this.add.rectangle(0, 0, width, height, bgColor).setOrigin(0);
 
-    // Title
+    // Add subtle CRT effect for early eras
+    if (this.currentEra <= 5) {
+      AnimationEffects.createScanLines(this, 0.05);
+    }
+
+    // Title with glitch effect for later eras
     const eraName = this.getEraName(this.currentEra);
-    this.add.text(width / 2, 50, `YOUR BASEMENT - ${eraName}`, {
+    const titleText = this.add.text(width / 2, 50, `YOUR WORKSPACE - ${eraName}`, {
       fontSize: '32px',
-      color: '#00ff00',
+      color: this.getTitleColor(this.currentEra),
       fontFamily: 'monospace',
     }).setOrigin(0.5);
 
-    // Player info
-    this.add.text(50, 100, `Programmer: ${this.playerName}`, {
+    if (this.currentEra >= 8) {
+      AnimationEffects.glitchText(this, titleText, 1000);
+    }
+
+    // Player info with animations
+    const infoX = 50;
+    const infoY = 100;
+    
+    const nameText = this.add.text(infoX, infoY, `Programmer: ${this.playerName}`, {
       fontSize: '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
+    AnimationEffects.fadeIn(this, nameText, 500);
 
-    this.add.text(50, 130, `Money: $${state.money}`, {
+    const moneyText = this.add.text(infoX, infoY + 30, `Money: $${state.money}`, {
       fontSize: '16px',
       color: '#ffff00',
       fontFamily: 'monospace',
     });
+    AnimationEffects.fadeIn(this, moneyText, 700);
 
-    // Reputation display
-    this.add.text(50, 160, 'Reputation:', {
+    // Reputation display with visual bars
+    this.add.text(infoX, infoY + 60, 'Reputation:', {
       fontSize: '16px',
       color: '#ffffff',
       fontFamily: 'monospace',
     });
 
-    const repY = 185;
-    this.add.text(70, repY, `Hacker: ${state.reputation.hackerCred}`, {
-      fontSize: '14px',
-      color: '#00ffff',
-      fontFamily: 'monospace',
-    });
-    this.add.text(70, repY + 25, `Corporate: ${state.reputation.corporateStanding}`, {
-      fontSize: '14px',
-      color: '#ff00ff',
-      fontFamily: 'monospace',
-    });
-    this.add.text(70, repY + 50, `Government: ${state.reputation.governmentTrust}`, {
-      fontSize: '14px',
-      color: '#ff0000',
-      fontFamily: 'monospace',
-    });
-    this.add.text(70, repY + 75, `Community: ${state.reputation.communityRespect}`, {
-      fontSize: '14px',
-      color: '#00ff00',
-      fontFamily: 'monospace',
-    });
+    const repY = infoY + 85;
+    this.createReputationBar(infoX + 10, repY, 'Hacker', state.reputation.hackerCred, '#00ffff');
+    this.createReputationBar(infoX + 10, repY + 25, 'Corporate', state.reputation.corporateStanding, '#ff00ff');
+    this.createReputationBar(infoX + 10, repY + 50, 'Government', state.reputation.governmentTrust, '#ff0000');
+    this.createReputationBar(infoX + 10, repY + 75, 'Community', state.reputation.communityRespect, '#00ff00');
 
-    // Basement visual representation
-    this.createBasementVisual();
+    // Evolved workspace visualization
+    this.workspaceVisualizer = new WorkspaceVisualizer(this, width / 2 + 150, 350);
+    this.workspaceVisualizer.create({
+      era: this.currentEra,
+      equipment: state.equipment,
+    });
 
     // Menu
     this.createMenu();
 
     // Auto-save when entering basement
     SaveLoadSystem.autoSave();
+
+    // Show welcome notification on first visit
+    if (state.currentEra === 1 && state.completedMissions.length === 0) {
+      this.time.delayedCall(500, () => {
+        this.notificationSystem?.show({
+          title: 'Welcome to Your Basement',
+          message: 'This is where you\'ll build your programming empire. Start by selecting a project from the Project Board!',
+          type: 'info',
+          duration: 4000,
+        });
+      });
+
+      // Show tutorial
+      this.time.delayedCall(5000, () => {
+        this.showTutorial();
+      });
+    }
   }
 
   private getEraName(era: number): string {
@@ -100,28 +131,118 @@ export class BasementScene extends Phaser.Scene {
     return eraNames[era] || 'UNKNOWN ERA';
   }
 
-  private createBasementVisual(): void {
-    const centerX = this.cameras.main.width / 2 + 150;
-    const centerY = 350;
+  private getBackgroundColor(era: number): number {
+    // Background evolves from dark to more modern
+    const colors: Record<number, number> = {
+      1: 0x0a0a0a, // Very dark (bare basement)
+      2: 0x1a1a1a,
+      3: 0x1a1a1a,
+      4: 0x222222,
+      5: 0x252525,
+      6: 0x1a1a2a, // Slight blue tint
+      7: 0x1a1a2a,
+      8: 0x0a0a15, // Darker blue
+      9: 0x0a0015, // Purple tint
+      10: 0x000010, // Deep blue/black
+    };
+    return colors[era] || 0x1a1a1a;
+  }
 
-    // Simple basement representation
-    // Desk
-    this.add.rectangle(centerX, centerY + 50, 200, 20, 0x8B4513);
+  private getTitleColor(era: number): string {
+    // Title color evolves with technology
+    const colors: Record<number, string> = {
+      1: '#00aa00', // Dim green
+      2: '#00ff00', // Bright green
+      3: '#00ff00',
+      4: '#00ff00',
+      5: '#00ff00',
+      6: '#00ffff', // Cyan (internet era)
+      7: '#00aaff', // Blue
+      8: '#0088ff',
+      9: '#ff00ff', // Magenta (AI)
+      10: '#00ffff', // Cyan (futuristic)
+    };
+    return colors[era] || '#00ff00';
+  }
 
-    // Chair
-    this.add.rectangle(centerX, centerY + 100, 60, 80, 0x654321);
-
-    // Monitor/Computer
-    const computerColor = this.currentEra >= 5 ? 0x444444 : 0x333333;
-    this.add.rectangle(centerX, centerY, 80, 60, computerColor);
-    this.add.rectangle(centerX, centerY - 5, 70, 50, 0x003300);
-
+  private createReputationBar(x: number, y: number, label: string, value: number, color: string): void {
     // Label
-    this.add.text(centerX, centerY + 150, 'Your Workspace', {
+    this.add.text(x, y, `${label}:`, {
       fontSize: '14px',
-      color: '#888888',
+      color: color,
       fontFamily: 'monospace',
-    }).setOrigin(0.5);
+    });
+
+    // Value
+    this.add.text(x + 120, y, value.toString(), {
+      fontSize: '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+    });
+
+    // Progress bar
+    const barWidth = 100;
+    const barHeight = 8;
+    const barBg = this.add.rectangle(x + 160, y + 6, barWidth, barHeight, 0x333333);
+    barBg.setOrigin(0, 0.5);
+    
+    const fillWidth = Math.min((value / 100) * barWidth, barWidth);
+    const barFill = this.add.rectangle(x + 160, y + 6, fillWidth, barHeight, parseInt(color.replace('#', '0x')));
+    barFill.setOrigin(0, 0.5);
+
+    // Animate fill
+    barFill.setScale(0, 1);
+    this.tweens.add({
+      targets: barFill,
+      scaleX: 1,
+      duration: 800,
+      ease: 'Power2',
+      delay: 300,
+    });
+  }
+
+  private showTutorial(): void {
+    const steps = [
+      {
+        title: 'Welcome to Vibe Code Simulator!',
+        message: 'You are a programmer starting in 1945. Your goal is to build your career, upgrade your workspace, and uncover the truth about technology\'s evolution.',
+        position: 'center' as const,
+      },
+      {
+        title: 'Project Board',
+        message: 'Press [P] or click "Project Board" to see available missions. Complete missions to earn money and reputation.',
+        position: 'bottom' as const,
+      },
+      {
+        title: 'Equipment Shop',
+        message: 'Press [E] to buy equipment upgrades. Better equipment makes minigames easier and your workspace more impressive!',
+        position: 'bottom' as const,
+      },
+      {
+        title: 'Investigation Board',
+        message: 'Press [I] to view conspiracy documents you\'ve discovered. Connect the dots to unlock special endings.',
+        position: 'bottom' as const,
+      },
+      {
+        title: 'Era Progression',
+        message: 'Press [N] to advance to the next era once you\'ve completed enough missions. Your workspace will evolve with technology!',
+        position: 'bottom' as const,
+      },
+      {
+        title: 'Good Luck!',
+        message: 'The journey through 80 years of computing history begins now. Every choice matters!',
+        position: 'center' as const,
+      },
+    ];
+
+    this.tutorialSystem?.start(steps, () => {
+      this.notificationSystem?.show({
+        title: 'Tutorial Complete',
+        message: 'You\'re ready to begin your journey!',
+        type: 'success',
+        duration: 2000,
+      });
+    });
   }
 
   private createMenu(): void {

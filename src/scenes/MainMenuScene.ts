@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { useGameStore } from '../store/gameStore';
 import { SaveLoadSystem } from '../systems/SaveLoadSystem';
+import { AnimationEffects } from '../utils/AnimationEffects';
 
 export class MainMenuScene extends Phaser.Scene {
   private titleText!: Phaser.GameObjects.Text;
@@ -18,11 +19,17 @@ export class MainMenuScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
+    // Starfield background for futuristic feel
+    AnimationEffects.createStarfield(this, 150);
+
     // Add scrolling terminal background effect
     this.createTerminalBackground();
 
-    // Title
-    this.titleText = this.add.text(width / 2, 150, 'VIBE CODE SIMULATOR', {
+    // Scan lines for retro CRT effect
+    AnimationEffects.createScanLines(this, 0.08);
+
+    // Title with entrance animation
+    this.titleText = this.add.text(width / 2, -100, 'VIBE CODE SIMULATOR', {
       fontSize: '48px',
       color: '#00ff00',
       fontFamily: 'monospace',
@@ -30,15 +37,41 @@ export class MainMenuScene extends Phaser.Scene {
     });
     this.titleText.setOrigin(0.5);
 
-    // Subtitle
+    // Slide in title
+    this.tweens.add({
+      targets: this.titleText,
+      y: 150,
+      duration: 1000,
+      ease: 'Bounce.easeOut',
+    });
+
+    // Glitch effect on title
+    this.time.delayedCall(1200, () => {
+      AnimationEffects.glitchText(this, this.titleText, 2000);
+    });
+
+    // Subtitle with fade in
     this.subtitleText = this.add.text(width / 2, 220, '80 Years of Programming History', {
       fontSize: '20px',
       color: '#00aa00',
       fontFamily: 'monospace',
     });
     this.subtitleText.setOrigin(0.5);
+    this.subtitleText.setAlpha(0);
 
-    // Menu options
+    this.tweens.add({
+      targets: this.subtitleText,
+      alpha: 1,
+      duration: 1000,
+      delay: 800,
+    });
+
+    // Pulse subtitle
+    this.time.delayedCall(1800, () => {
+      AnimationEffects.pulse(this, this.subtitleText, 1.05, 2000);
+    });
+
+    // Menu options with staggered entrance
     const options = [
       { text: 'NEW GAME', action: () => this.startNewGame() },
       { text: 'CONTINUE', action: () => this.continueGame() },
@@ -57,14 +90,34 @@ export class MainMenuScene extends Phaser.Scene {
       });
       optionText.setOrigin(0.5);
       optionText.setInteractive({ useHandCursor: true });
+      optionText.setAlpha(0);
+      optionText.setX(width / 2 - 100);
+
+      // Staggered slide in
+      this.tweens.add({
+        targets: optionText,
+        alpha: 1,
+        x: width / 2,
+        duration: 500,
+        ease: 'Power2',
+        delay: 1200 + (index * 150),
+      });
 
       optionText.on('pointerover', () => {
         this.selectedIndex = index;
         this.updateSelection();
+        
+        // Ripple effect on hover
+        AnimationEffects.ripple(this, width / 2, startY + index * spacing, 0x00ff00);
       });
 
       optionText.on('pointerdown', () => {
-        option.action();
+        // Particle burst on click
+        AnimationEffects.particleBurst(this, width / 2, startY + index * spacing, 0x00ff00, 15);
+        
+        this.time.delayedCall(200, () => {
+          option.action();
+        });
       });
 
       this.menuOptions.push(optionText);
@@ -82,19 +135,32 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     this.input.keyboard?.on('keydown-ENTER', () => {
-      if (this.selectedIndex === 0) this.startNewGame();
-      else if (this.selectedIndex === 1) this.continueGame();
-      else if (this.selectedIndex === 2) this.showLoadMenu();
-      else if (this.selectedIndex === 3) this.showCredits();
+      const startY = 350;
+      const spacing = 60;
+      AnimationEffects.particleBurst(this, width / 2, startY + this.selectedIndex * spacing, 0x00ff00, 15);
+      
+      this.time.delayedCall(200, () => {
+        if (this.selectedIndex === 0) this.startNewGame();
+        else if (this.selectedIndex === 1) this.continueGame();
+        else if (this.selectedIndex === 2) this.showLoadMenu();
+        else if (this.selectedIndex === 3) this.showCredits();
+      });
     });
 
     this.updateSelection();
 
-    // Version info
-    this.add.text(10, height - 30, 'v1.0.0', {
+    // Version info with fade in
+    const versionText = this.add.text(10, height - 30, 'v1.0.0', {
       fontSize: '12px',
       color: '#666666',
       fontFamily: 'monospace',
+    });
+    versionText.setAlpha(0);
+    this.tweens.add({
+      targets: versionText,
+      alpha: 1,
+      duration: 1000,
+      delay: 2000,
     });
   }
 
