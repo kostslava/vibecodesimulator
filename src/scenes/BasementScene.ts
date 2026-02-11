@@ -15,7 +15,6 @@ export class BasementScene extends Phaser.Scene {
   private workspaceVisualizer: WorkspaceVisualizer | null = null;
   private notificationSystem: NotificationSystem | null = null;
   private tutorialSystem: TutorialSystem | null = null;
-  private tutorialShown: boolean = false;
   private welcomeTimer: Phaser.Time.TimerEvent | null = null;
   private tutorialTimer: Phaser.Time.TimerEvent | null = null;
 
@@ -116,9 +115,7 @@ export class BasementScene extends Phaser.Scene {
     SaveLoadSystem.autoSave();
 
     // Show welcome notification and tutorial on first visit only
-    if (state.currentEra === 1 && state.completedMissions.length === 0 && !this.tutorialShown) {
-      this.tutorialShown = true;
-      
+    if (state.currentEra === 1 && state.completedMissions.length === 0 && !state.tutorialCompleted) {
       this.welcomeTimer = this.time.delayedCall(500, () => {
         this.notificationSystem?.show({
           title: 'Welcome to Your Basement',
@@ -295,6 +292,10 @@ export class BasementScene extends Phaser.Scene {
     ];
 
     this.tutorialSystem?.start(steps, () => {
+      // Mark tutorial as completed
+      const state = useGameStore.getState();
+      state.setTutorialCompleted();
+      
       this.notificationSystem?.show({
         title: 'Tutorial Complete',
         message: 'You\'re ready to begin your journey!',
