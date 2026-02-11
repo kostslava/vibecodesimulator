@@ -168,6 +168,22 @@ export class MainMenuScene extends Phaser.Scene {
       duration: 1000,
       delay: 2000,
     });
+
+    // Setup scene lifecycle handlers
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.destroy, this);
+  }
+
+  private shutdown(): void {
+    // Clean up keyboard listeners
+    if (this.input.keyboard) {
+      this.input.keyboard.removeAllKeys();
+      this.input.keyboard.removeAllListeners();
+    }
+  }
+
+  private destroy(): void {
+    this.shutdown();
   }
 
   private createTerminalBackground(): void {

@@ -150,6 +150,7 @@ export class BasementScene extends Phaser.Scene {
     // Clean up keyboard listeners
     if (this.input.keyboard) {
       this.input.keyboard.removeAllKeys();
+      this.input.keyboard.removeAllListeners();
     }
 
     // Clean up systems
