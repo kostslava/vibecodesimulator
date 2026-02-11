@@ -19,14 +19,16 @@ export class MainMenuScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Starfield background for futuristic feel
-    AnimationEffects.createStarfield(this, 150);
+    // Enhanced background effects
+    AnimationEffects.createStarfield(this, 200);
+    AnimationEffects.createMatrixRain(this, 12);
+    AnimationEffects.createCircuitPattern(this);
 
     // Add scrolling terminal background effect
     this.createTerminalBackground();
 
     // Scan lines for retro CRT effect
-    AnimationEffects.createScanLines(this, 0.08);
+    AnimationEffects.createScanLines(this, 0.06);
 
     // Title with entrance animation
     this.titleText = this.add.text(width / 2, -100, 'VIBE CODE SIMULATOR', {
@@ -37,12 +39,15 @@ export class MainMenuScene extends Phaser.Scene {
     });
     this.titleText.setOrigin(0.5);
 
-    // Slide in title
+    // Slide in title with particle effect
     this.tweens.add({
       targets: this.titleText,
       y: 150,
       duration: 1000,
       ease: 'Bounce.easeOut',
+      onComplete: () => {
+        AnimationEffects.particleBurst(this, width / 2, 150, 0x00ff00, 20);
+      },
     });
 
     // Glitch effect on title
@@ -50,7 +55,7 @@ export class MainMenuScene extends Phaser.Scene {
       AnimationEffects.glitchText(this, this.titleText, 2000);
     });
 
-    // Subtitle with fade in
+    // Subtitle with fade in and holographic effect
     this.subtitleText = this.add.text(width / 2, 220, '80 Years of Programming History', {
       fontSize: '20px',
       color: '#00aa00',
@@ -66,9 +71,10 @@ export class MainMenuScene extends Phaser.Scene {
       delay: 800,
     });
 
-    // Pulse subtitle
+    // Pulse subtitle with holographic effect
     this.time.delayedCall(1800, () => {
       AnimationEffects.pulse(this, this.subtitleText, 1.05, 2000);
+      AnimationEffects.holographicEffect(this, this.subtitleText);
     });
 
     // Menu options with staggered entrance

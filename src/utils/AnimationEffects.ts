@@ -209,4 +209,204 @@ export class AnimationEffects {
       },
     });
   }
+
+  /**
+   * Matrix-style digital rain effect
+   */
+  static createMatrixRain(scene: Phaser.Scene, count: number = 20): void {
+    const width = scene.cameras.main.width;
+    const height = scene.cameras.main.height;
+    const chars = '01アイウエオカキクケコサシスセソタチツテト';
+    
+    for (let i = 0; i < count; i++) {
+      const x = Math.random() * width;
+      const startY = -Math.random() * height;
+      
+      const column: Phaser.GameObjects.Text[] = [];
+      const columnLength = 10 + Math.floor(Math.random() * 10);
+      
+      for (let j = 0; j < columnLength; j++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const text = scene.add.text(x, startY - j * 20, char, {
+          fontSize: '16px',
+          color: j === 0 ? '#ffffff' : '#00ff00',
+          fontFamily: 'monospace',
+        });
+        text.setAlpha(j === 0 ? 1 : 0.5 - (j / columnLength * 0.5));
+        text.setDepth(-50);
+        column.push(text);
+      }
+      
+      // Animate column falling
+      scene.tweens.add({
+        targets: column,
+        y: '+=800',
+        duration: 5000 + Math.random() * 5000,
+        ease: 'Linear',
+        repeat: -1,
+        delay: Math.random() * 3000,
+        onUpdate: () => {
+          // Update characters randomly
+          if (Math.random() > 0.95) {
+            column.forEach(text => {
+              text.setText(chars[Math.floor(Math.random() * chars.length)]);
+            });
+          }
+        },
+      });
+    }
+  }
+
+  /**
+   * Neon glow effect
+   */
+  static neonGlow(scene: Phaser.Scene, gameObject: Phaser.GameObjects.Text, color: string = '#00ff00'): void {
+    const colors = [color, '#ffffff', color];
+    let colorIndex = 0;
+
+    scene.time.addEvent({
+      delay: 100,
+      callback: () => {
+        gameObject.setColor(colors[colorIndex]);
+        colorIndex = (colorIndex + 1) % colors.length;
+      },
+      loop: true,
+    });
+  }
+
+  /**
+   * Circuit board pattern background
+   */
+  static createCircuitPattern(scene: Phaser.Scene): void {
+    const graphics = scene.add.graphics();
+    graphics.setDepth(-90);
+    graphics.lineStyle(1, 0x003300, 0.3);
+
+    const width = scene.cameras.main.width;
+    const height = scene.cameras.main.height;
+    const gridSize = 50;
+
+    // Draw grid
+    for (let x = 0; x < width; x += gridSize) {
+      graphics.lineBetween(x, 0, x, height);
+    }
+    for (let y = 0; y < height; y += gridSize) {
+      graphics.lineBetween(0, y, width, y);
+    }
+
+    // Add circuit nodes
+    for (let i = 0; i < 30; i++) {
+      const x = Math.floor(Math.random() * (width / gridSize)) * gridSize;
+      const y = Math.floor(Math.random() * (height / gridSize)) * gridSize;
+      
+      graphics.fillStyle(0x00ff00, 0.5);
+      graphics.fillCircle(x, y, 3);
+      
+      // Draw random connecting lines
+      if (Math.random() > 0.5) {
+        const endX = x + (Math.random() > 0.5 ? gridSize : -gridSize);
+        graphics.lineStyle(2, 0x00ff00, 0.3);
+        graphics.lineBetween(x, y, endX, y);
+      }
+      if (Math.random() > 0.5) {
+        const endY = y + (Math.random() > 0.5 ? gridSize : -gridSize);
+        graphics.lineStyle(2, 0x00ff00, 0.3);
+        graphics.lineBetween(x, y, x, endY);
+      }
+    }
+  }
+
+  /**
+   * Code scrolling background effect
+   */
+  static createScrollingCode(scene: Phaser.Scene, speed: number = 1): void {
+    const codeLines = [
+      'function hackTheMainframe() {',
+      '  const data = fetchSecretData();',
+      '  if (data.encrypted) {',
+      '    return decrypt(data);',
+      '  }',
+      '}',
+      '',
+      'class QuantumComputer {',
+      '  async process(qubits) {',
+      '    return await this.superposition(qubits);',
+      '  }',
+      '}',
+    ];
+
+    const width = scene.cameras.main.width;
+    let yPos = 100;
+
+    codeLines.forEach((line, index) => {
+      const text = scene.add.text(width + 100, yPos + index * 20, line, {
+        fontSize: '12px',
+        color: '#00aa00',
+        fontFamily: 'monospace',
+      });
+      text.setAlpha(0.2);
+      text.setDepth(-80);
+
+      scene.tweens.add({
+        targets: text,
+        x: -200,
+        duration: 15000 / speed,
+        ease: 'Linear',
+        repeat: -1,
+      });
+    });
+  }
+
+  /**
+   * Holographic effect
+   */
+  static holographicEffect(scene: Phaser.Scene, gameObject: Phaser.GameObjects.GameObject): void {
+    scene.tweens.add({
+      targets: gameObject,
+      alpha: { from: 0.7, to: 1 },
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    scene.tweens.add({
+      targets: gameObject,
+      scaleY: { from: 1, to: 1.02 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  /**
+   * Data stream effect
+   */
+  static dataStream(scene: Phaser.Scene, x: number, y: number, direction: 'up' | 'down' | 'left' | 'right' = 'down'): void {
+    const chars = '01';
+    for (let i = 0; i < 10; i++) {
+      scene.time.delayedCall(i * 100, () => {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const text = scene.add.text(x, y, char, {
+          fontSize: '14px',
+          color: '#00ffff',
+          fontFamily: 'monospace',
+        });
+        text.setDepth(500);
+
+        const movement: any = { alpha: 0, duration: 1000, ease: 'Power2' };
+        if (direction === 'down') movement.y = y + 100;
+        else if (direction === 'up') movement.y = y - 100;
+        else if (direction === 'left') movement.x = x - 100;
+        else if (direction === 'right') movement.x = x + 100;
+
+        scene.tweens.add({
+          targets: text,
+          ...movement,
+          onComplete: () => text.destroy(),
+        });
+      });
+    }
+  }
 }

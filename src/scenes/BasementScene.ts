@@ -36,12 +36,25 @@ export class BasementScene extends Phaser.Scene {
     const bgColor = this.getBackgroundColor(this.currentEra);
     this.add.rectangle(0, 0, width, height, bgColor).setOrigin(0);
 
-    // Add subtle CRT effect for early eras
-    if (this.currentEra <= 5) {
+    // Add era-appropriate background effects
+    if (this.currentEra <= 3) {
+      // Early eras: CRT effect
       AnimationEffects.createScanLines(this, 0.05);
+    } else if (this.currentEra <= 6) {
+      // Mid eras: Circuit pattern
+      AnimationEffects.createCircuitPattern(this);
+      AnimationEffects.createScanLines(this, 0.03);
+    } else if (this.currentEra <= 8) {
+      // Later eras: Scrolling code
+      AnimationEffects.createScrollingCode(this, 0.5);
+      AnimationEffects.createCircuitPattern(this);
+    } else {
+      // Modern eras: Matrix rain
+      AnimationEffects.createMatrixRain(this, 15);
+      AnimationEffects.createCircuitPattern(this);
     }
 
-    // Title with glitch effect for later eras
+    // Title with era-appropriate effects
     const eraName = this.getEraName(this.currentEra);
     const titleText = this.add.text(width / 2, 50, `YOUR WORKSPACE - ${eraName}`, {
       fontSize: '32px',
@@ -51,6 +64,8 @@ export class BasementScene extends Phaser.Scene {
 
     if (this.currentEra >= 8) {
       AnimationEffects.glitchText(this, titleText, 1000);
+    } else if (this.currentEra >= 6) {
+      AnimationEffects.pulse(this, titleText, 1.02, 3000);
     }
 
     // Player info with animations
