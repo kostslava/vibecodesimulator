@@ -10,12 +10,14 @@ export interface Notification {
 /**
  * NotificationSystem - Creates Undertale-style popup notifications
  * Features: typewriter effect, icons, animations, sound effects
+ * Ensures only one notification is displayed at a time
  */
 export class NotificationSystem {
   private scene: Phaser.Scene;
-  private activeNotifications: Phaser.GameObjects.Container[] = [];
+  private activeNotification: Phaser.GameObjects.Container | null = null;
   private notificationQueue: Notification[] = [];
   private isShowing: boolean = false;
+  private typewriterTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -37,6 +39,11 @@ export class NotificationSystem {
       return;
     }
 
+    // Ensure we're not already showing a notification
+    if (this.activeNotification) {
+      return;
+    }
+
     this.isShowing = true;
     const notification = this.notificationQueue.shift()!;
     const duration = notification.duration || 3000;
@@ -46,6 +53,7 @@ export class NotificationSystem {
     // Create container
     const container = this.scene.add.container(width / 2, -100);
     container.setDepth(10000); // Always on top
+    this.activeNotification = container;
 
     // Background with border
     const bgWidth = 500;
@@ -53,6 +61,27 @@ export class NotificationSystem {
     const bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, 0x000000, 0.95);
     bg.setStrokeStyle(3, this.getColorForType(notification.type));
     container.add(bg);
+
+    // Add subtle inner glow
+    const innerGlow = this.scene.add.rectangle(0, 0, bgWidth - 6, bgHeight - 6, this.getColorForType(notification.type), 0.1);
+    container.add(innerGlow);
+
+    // Add corner accents
+    const accentSize = 10;
+    const accentColor = this.getColorForType(notification.type);
+    [-1, 1].forEach(xDir => {
+      [-1, 1].forEach(yDir => {
+        const accent = this.scene.add.rectangle(
+          xDir * (bgWidth / 2 - accentSize / 2),
+          yDir * (bgHeight / 2 - accentSize / 2),
+          accentSize,
+          accentSize,
+          accentColor,
+          0.8
+        );
+        container.add(accent);
+      });
+    });
 
     // Icon
     const icon = this.getIconForType(notification.type);
@@ -100,7 +129,10 @@ export class NotificationSystem {
               ease: 'Back.easeIn',
               onComplete: () => {
                 container.destroy();
-                this.activeNotifications = this.activeNotifications.filter(n => n !== container);
+                if (this.activeNotification === container) {
+                  this.activeNotification = null;
+                }
+                // Show next notification in queue
                 this.showNext();
               },
             });
@@ -108,16 +140,20 @@ export class NotificationSystem {
         });
       },
     });
-
-    this.activeNotifications.push(container);
   }
 
   private typewriterEffect(textObject: Phaser.GameObjects.Text, fullText: string, onComplete: () => void): void {
+    // Clean up previous timer
+    if (this.typewriterTimer) {
+      this.typewriterTimer.destroy();
+      this.typewriterTimer = null;
+    }
+
     let currentText = '';
     let index = 0;
     const speed = 30; // milliseconds per character
 
-    const timer = this.scene.time.addEvent({
+    this.typewriterTimer = this.scene.time.addEvent({
       delay: speed,
       callback: () => {
         if (index < fullText.length) {
@@ -125,7 +161,10 @@ export class NotificationSystem {
           textObject.setText(currentText);
           index++;
         } else {
-          timer.destroy();
+          if (this.typewriterTimer) {
+            this.typewriterTimer.destroy();
+            this.typewriterTimer = null;
+          }
           onComplete();
         }
       },
@@ -173,9 +212,22 @@ export class NotificationSystem {
    * Clear all notifications
    */
   public clearAll(): void {
-    this.activeNotifications.forEach(container => container.destroy());
-    this.activeNotifications = [];
+    if (this.activeNotification) {
+      this.activeNotification.destroy();
+      this.activeNotification = null;
+    }
+    if (this.typewriterTimer) {
+      this.typewriterTimer.destroy();
+      this.typewriterTimer = null;
+    }
     this.notificationQueue = [];
     this.isShowing = false;
+  }
+
+  /**
+   * Destroy notification system and clean up resources
+   */
+  public destroy(): void {
+    this.clearAll();
   }
 }

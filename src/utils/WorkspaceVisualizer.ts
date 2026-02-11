@@ -71,7 +71,7 @@ export class WorkspaceVisualizer {
     wall.setAlpha(0.3);
     this.elements.push(wall);
 
-    // Single hanging bulb
+    // Single hanging bulb with flicker animation
     const bulbCord = this.scene.add.rectangle(this.centerX - 50, this.centerY - 200, 2, 80, 0x333333);
     this.elements.push(bulbCord);
     
@@ -79,9 +79,19 @@ export class WorkspaceVisualizer {
     bulb.setAlpha(0.8);
     this.elements.push(bulb);
 
-    // Light glow effect
+    // Light glow effect with pulsing animation
     const glow = this.scene.add.circle(this.centerX - 50, this.centerY - 160, 60, 0xffff99, 0.1);
     this.elements.push(glow);
+
+    // Flickering light animation
+    this.scene.tweens.add({
+      targets: [bulb, glow],
+      alpha: '-=0.1',
+      duration: 100,
+      yoyo: true,
+      repeat: -1,
+      delay: Math.random() * 2000,
+    });
 
     // Wooden table (rough)
     const tableTop = this.scene.add.rectangle(this.centerX, this.centerY + 50, 250, 25, 0x8B4513);
@@ -102,9 +112,20 @@ export class WorkspaceVisualizer {
       const screen = this.scene.add.rectangle(this.centerX - 30, this.centerY + 10, 80, 40, 0x003300);
       screen.setAlpha(0.6);
       this.elements.push(terminal, screen);
+      
+      // Add blinking cursor on screen
+      const cursor = this.scene.add.rectangle(this.centerX - 50, this.centerY + 10, 3, 8, 0x00ff00);
+      this.elements.push(cursor);
+      this.scene.tweens.add({
+        targets: cursor,
+        alpha: 0,
+        duration: 500,
+        yoyo: true,
+        repeat: -1,
+      });
     }
 
-    // Scattered punch cards
+    // Scattered punch cards with entrance animation
     for (let i = 0; i < 3; i++) {
       const card = this.scene.add.rectangle(
         this.centerX + 50 + i * 15,
@@ -112,7 +133,15 @@ export class WorkspaceVisualizer {
         30, 8, 0xeeeecc
       );
       card.setRotation((Math.random() - 0.5) * 0.3);
+      card.setAlpha(0);
       this.elements.push(card);
+      
+      this.scene.tweens.add({
+        targets: card,
+        alpha: 1,
+        duration: 300,
+        delay: i * 100,
+      });
     }
 
     // Label
