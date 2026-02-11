@@ -492,7 +492,7 @@ export class BasementScene extends Phaser.Scene {
       fontFamily: 'monospace',
     }).setOrigin(0.5);
 
-    this.add.text(100, 120, `Your Money: $${state.money}`, {
+    const moneyText = this.add.text(100, 120, `Your Money: $${state.money}`, {
       fontSize: '18px',
       color: '#ffff00',
       fontFamily: 'monospace',
@@ -520,23 +520,11 @@ export class BasementScene extends Phaser.Scene {
             itemText.setText(`[OWNED] ${item.name}\n${item.description}`);
             itemText.disableInteractive();
             // Update money display
-            const moneyText = this.children.getByName('shopMoneyText') as Phaser.GameObjects.Text;
-            if (moneyText) {
-              moneyText.setText(`Your Money: $${state.money}`);
-            }
+            moneyText.setText(`Your Money: $${state.money}`);
           }
         });
       }
     });
-
-    // Add name to money text for easy updating
-    const moneyText = this.children.list.find(child => 
-      child instanceof Phaser.GameObjects.Text && 
-      child.text.startsWith('Your Money:')
-    ) as Phaser.GameObjects.Text;
-    if (moneyText) {
-      moneyText.setName('shopMoneyText');
-    }
 
     overlay.on('pointerdown', () => {
       overlay.destroy();
