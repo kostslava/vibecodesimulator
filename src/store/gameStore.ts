@@ -42,6 +42,7 @@ export interface SaveGame {
   minigamesWon: number;
   minigamesLost: number;
   totalPlaytime: number;
+  tutorialCompleted: boolean;
 }
 
 interface GameState {
@@ -74,6 +75,7 @@ interface GameState {
   minigamesWon: number;
   minigamesLost: number;
   totalPlaytime: number;
+  tutorialCompleted: boolean;
   
   // Actions
   setPlayerName: (name: string) => void;
@@ -90,6 +92,7 @@ interface GameState {
   recordChoice: (choiceId: string, choice: string) => void;
   setCareerPath: (path: 'corporate' | 'indie' | 'opensource' | 'startup' | 'government' | 'academic') => void;
   incrementStat: (stat: 'projectsCompleted' | 'minigamesWon' | 'minigamesLost') => void;
+  setTutorialCompleted: () => void;
   resetGame: () => void;
   loadSave: (save: SaveGame) => void;
   getSaveData: () => SaveGame;
@@ -119,6 +122,7 @@ const initialState = {
   minigamesWon: 0,
   minigamesLost: 0,
   totalPlaytime: 0,
+  tutorialCompleted: false,
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -194,6 +198,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     [stat]: state[stat] + 1,
   })),
   
+  setTutorialCompleted: () => set({ tutorialCompleted: true }),
+  
   resetGame: () => set(initialState),
   
   loadSave: (save: SaveGame) => set({
@@ -215,6 +221,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     minigamesWon: save.minigamesWon,
     minigamesLost: save.minigamesLost,
     totalPlaytime: save.totalPlaytime,
+    tutorialCompleted: save.tutorialCompleted || false,
   }),
   
   getSaveData: (): SaveGame => {
@@ -240,6 +247,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       minigamesWon: state.minigamesWon,
       minigamesLost: state.minigamesLost,
       totalPlaytime: state.totalPlaytime,
+      tutorialCompleted: state.tutorialCompleted,
     };
   },
 }));
