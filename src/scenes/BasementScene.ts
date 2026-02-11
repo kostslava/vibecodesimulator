@@ -15,6 +15,9 @@ export class BasementScene extends Phaser.Scene {
   private workspaceVisualizer: WorkspaceVisualizer | null = null;
   private notificationSystem: NotificationSystem | null = null;
   private tutorialSystem: TutorialSystem | null = null;
+  private tutorialShown: boolean = false;
+  private welcomeTimer: Phaser.Time.TimerEvent | null = null;
+  private tutorialTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super({ key: 'BasementScene' });
@@ -112,9 +115,11 @@ export class BasementScene extends Phaser.Scene {
     // Auto-save when entering basement
     SaveLoadSystem.autoSave();
 
-    // Show welcome notification on first visit
-    if (state.currentEra === 1 && state.completedMissions.length === 0) {
-      this.time.delayedCall(500, () => {
+    // Show welcome notification and tutorial on first visit only
+    if (state.currentEra === 1 && state.completedMissions.length === 0 && !this.tutorialShown) {
+      this.tutorialShown = true;
+      
+      this.welcomeTimer = this.time.delayedCall(500, () => {
         this.notificationSystem?.show({
           title: 'Welcome to Your Basement',
           message: 'This is where you\'ll build your programming empire. Start by selecting a project from the Project Board!',
@@ -124,10 +129,49 @@ export class BasementScene extends Phaser.Scene {
       });
 
       // Show tutorial
-      this.time.delayedCall(5000, () => {
+      this.tutorialTimer = this.time.delayedCall(5000, () => {
         this.showTutorial();
       });
     }
+
+    // Setup scene lifecycle handlers
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.destroy, this);
+  }
+
+  private shutdown(): void {
+    // Clean up timers
+    if (this.welcomeTimer) {
+      this.welcomeTimer.destroy();
+      this.welcomeTimer = null;
+    }
+    if (this.tutorialTimer) {
+      this.tutorialTimer.destroy();
+      this.tutorialTimer = null;
+    }
+
+    // Clean up keyboard listeners
+    if (this.input.keyboard) {
+      this.input.keyboard.removeAllKeys();
+    }
+
+    // Clean up systems
+    if (this.tutorialSystem) {
+      this.tutorialSystem.destroy();
+      this.tutorialSystem = null;
+    }
+    if (this.notificationSystem) {
+      this.notificationSystem = null;
+    }
+
+    // Clean up workspace visualizer
+    if (this.workspaceVisualizer) {
+      this.workspaceVisualizer = null;
+    }
+  }
+
+  private destroy(): void {
+    this.shutdown();
   }
 
   private getEraName(era: number): string {
@@ -342,7 +386,6 @@ export class BasementScene extends Phaser.Scene {
     closeButton.on('pointerdown', () => {
       overlay.destroy();
       boardContainer.destroy();
-      this.scene.restart();
     });
     boardContainer.add(closeButton);
 
@@ -471,16 +514,30 @@ export class BasementScene extends Phaser.Scene {
         itemText.on('pointerdown', () => {
           if (state.spendMoney(item.cost)) {
             state.addEquipment(item.id);
-            overlay.destroy();
-            this.scene.restart();
+            itemText.setColor('#666666');
+            itemText.setText(`[OWNED] ${item.name}\n${item.description}`);
+            itemText.disableInteractive();
+            // Update money display
+            const moneyText = this.children.getByName('shopMoneyText') as Phaser.GameObjects.Text;
+            if (moneyText) {
+              moneyText.setText(`Your Money: $${state.money}`);
+            }
           }
         });
       }
     });
 
+    // Add name to money text for easy updating
+    const moneyText = this.children.list.find(child => 
+      child instanceof Phaser.GameObjects.Text && 
+      child.text.startsWith('Your Money:')
+    ) as Phaser.GameObjects.Text;
+    if (moneyText) {
+      moneyText.setName('shopMoneyText');
+    }
+
     overlay.on('pointerdown', () => {
       overlay.destroy();
-      this.scene.restart();
     });
   }
 
@@ -521,7 +578,6 @@ export class BasementScene extends Phaser.Scene {
 
     overlay.on('pointerdown', () => {
       overlay.destroy();
-      this.scene.restart();
     });
   }
 

@@ -300,6 +300,10 @@ export class MainMenuScene extends Phaser.Scene {
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.95);
     overlay.setOrigin(0);
     overlay.setInteractive();
+    overlay.setDepth(100); // High depth to be on top
+
+    const creditsContainer = this.add.container(0, 0);
+    creditsContainer.setDepth(101);
 
     const credits = [
       'VIBE CODE SIMULATOR',
@@ -315,22 +319,21 @@ export class MainMenuScene extends Phaser.Scene {
     ];
 
     credits.forEach((line, index) => {
-      this.add.text(width / 2, 150 + index * 35, line, {
+      const text = this.add.text(width / 2, 150 + index * 35, line, {
         fontSize: '20px',
         color: '#00ff00',
         fontFamily: 'monospace',
       }).setOrigin(0.5);
+      creditsContainer.add(text);
     });
 
-    this.input.keyboard?.once('keydown', () => {
+    const closeCredits = () => {
+      creditsContainer.destroy();
       overlay.destroy();
-      this.scene.restart();
-    });
+    };
 
-    overlay.on('pointerdown', () => {
-      overlay.destroy();
-      this.scene.restart();
-    });
+    this.input.keyboard?.once('keydown', closeCredits);
+    overlay.on('pointerdown', closeCredits);
   }
 
   private showMessage(message: string): void {
