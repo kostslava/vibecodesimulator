@@ -395,7 +395,13 @@ export class AnimationEffects {
         });
         text.setDepth(500);
 
-        const movement: any = { alpha: 0, duration: 1000, ease: 'Power2' };
+        const movement: { alpha: number; duration: number; ease: string; onComplete?: () => void; y?: number; x?: number } = { 
+          alpha: 0, 
+          duration: 1000, 
+          ease: 'Power2',
+          onComplete: () => text.destroy(),
+        };
+        
         if (direction === 'down') movement.y = y + 100;
         else if (direction === 'up') movement.y = y - 100;
         else if (direction === 'left') movement.x = x - 100;
@@ -404,7 +410,6 @@ export class AnimationEffects {
         scene.tweens.add({
           targets: text,
           ...movement,
-          onComplete: () => text.destroy(),
         });
       });
     }

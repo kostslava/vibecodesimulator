@@ -244,6 +244,13 @@ export class TutorialSystem {
     });
   }
 
+  /**
+   * Clean up keyboard listeners properly
+   * Note: We call both removeAllListeners() and removeKey() to ensure complete cleanup:
+   * - removeAllListeners() clears the event handlers from the key object
+   * - removeKey() removes the key reference from Phaser's keyboard manager
+   * This dual cleanup prevents memory leaks and ensures old handlers don't interfere
+   */
   private cleanupKeyboardListeners(): void {
     if (this.spaceKey) {
       this.spaceKey.removeAllListeners();
